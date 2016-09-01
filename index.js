@@ -18,22 +18,30 @@ function Cloneable (stream, opts) {
   opts.objectMode = objectMode
 
   Ctor.call(this, opts)
+
+  this.on('newListener', onData)
 }
 
 inherits(Cloneable, Ctor)
 
-Cloneable.prototype.pipe = function (dest, opts) {
-  process.nextTick(this._clonePiped.bind(this))
-  return Ctor.prototype.pipe.call(this, dest, opts)
+function onData (event, listener) {
+  if (event === 'data') {
+    this.removeListener('newListener', onData)
+    process.nextTick(this._clonePiped.bind(this))
+  }
 }
 
 Cloneable.prototype.clone = function () {
+  if (!this._original) {
+    throw new Error('already started')
+  }
+
   this._clonesCount++
   return pump(this, new Clone(this))
 }
 
 Cloneable.prototype._clonePiped = function () {
-  if (this._original && --this._clonesCount === 0) {
+  if (--this._clonesCount === 0) {
     pump(this._original, this)
     this._original = undefined
   }
@@ -52,13 +60,17 @@ function Clone (parent, opts) {
   this.parent = parent
 
   Ctor.call(this, opts)
+
+  this.on('newListener', onDataClone)
+}
+
+function onDataClone (event, listener) {
+  if (event === 'data') {
+    process.nextTick(this.parent._clonePiped.bind(this.parent))
+    this.removeListener('newListener', onDataClone)
+  }
 }
 
 inherits(Clone, Ctor)
-
-Clone.prototype.pipe = function (dest, opts) {
-  process.nextTick(this.parent._clonePiped.bind(this.parent))
-  return Ctor.prototype.pipe.call(this, dest, opts)
-}
 
 module.exports = Cloneable
