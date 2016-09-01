@@ -1,5 +1,7 @@
 # cloneable-readable
 
+[![Build Status](https://travis-ci.org/mcollina/cloneable-readable.svg?branch=master)](https://travis-ci.org/mcollina/cloneable-readable)
+
 Clone a Readable stream, safely.
 
 ```js
@@ -26,6 +28,8 @@ clone a Readable in https://github.com/gulpjs/vinyl/issues/85
 and https://github.com/nodejs/readable-stream/issues/202. This is my take.
 
 **YOU MUST PIPE ALL CLONES TO START THE FLOW**
+
+You can also attach `'data'` events to them.
 
 ## Acknowledgements
 
