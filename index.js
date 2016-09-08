@@ -25,7 +25,7 @@ function Cloneable (stream, opts) {
 inherits(Cloneable, Ctor)
 
 function onData (event, listener) {
-  if (event === 'data') {
+  if (event === 'data' || event === 'readable') {
     this.removeListener('newListener', onData)
     process.nextTick(this._clonePiped.bind(this))
   }
@@ -65,7 +65,7 @@ function Clone (parent, opts) {
 }
 
 function onDataClone (event, listener) {
-  if (event === 'data') {
+  if (event === 'data' || event === 'readable') {
     process.nextTick(this.parent._clonePiped.bind(this.parent))
     this.removeListener('newListener', onDataClone)
   }
