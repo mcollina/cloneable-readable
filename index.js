@@ -2,6 +2,7 @@
 
 var through2 = require('through2')
 var inherits = require('inherits')
+var nextTick = require('process-nextick-args')
 var pump = require('pump')
 var Ctor = through2.ctor()
 
@@ -27,7 +28,7 @@ inherits(Cloneable, Ctor)
 function onData (event, listener) {
   if (event === 'data' || event === 'readable') {
     this.removeListener('newListener', onData)
-    process.nextTick(this._clonePiped.bind(this))
+    nextTick(clonePiped, this)
   }
 }
 
@@ -40,10 +41,10 @@ Cloneable.prototype.clone = function () {
   return pump(this, new Clone(this))
 }
 
-Cloneable.prototype._clonePiped = function () {
-  if (--this._clonesCount === 0) {
-    pump(this._original, this)
-    this._original = undefined
+function clonePiped (that) {
+  if (--that._clonesCount === 0) {
+    pump(that._original, that)
+    that._original = undefined
   }
 }
 
@@ -66,7 +67,7 @@ function Clone (parent, opts) {
 
 function onDataClone (event, listener) {
   if (event === 'data' || event === 'readable') {
-    process.nextTick(this.parent._clonePiped.bind(this.parent))
+    nextTick(clonePiped, this.parent)
     this.removeListener('newListener', onDataClone)
   }
 }
