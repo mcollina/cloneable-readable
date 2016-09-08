@@ -29,7 +29,7 @@ and https://github.com/nodejs/readable-stream/issues/202. This is my take.
 
 **YOU MUST PIPE ALL CLONES TO START THE FLOW**
 
-You can also attach `'data'` events to them.
+You can also attach `'data'` and `'readable'` events to them.
 
 ## Acknowledgements
 
