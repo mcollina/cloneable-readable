@@ -3,7 +3,6 @@
 var through2 = require('through2')
 var inherits = require('inherits')
 var nextTick = require('process-nextick-args')
-var pump = require('pump')
 var Ctor = through2.ctor()
 
 function Cloneable (stream, opts) {
@@ -21,6 +20,8 @@ function Cloneable (stream, opts) {
   Ctor.call(this, opts)
 
   this.on('newListener', onData)
+
+  forwardDestroy(stream, this)
 }
 
 inherits(Cloneable, Ctor)
@@ -38,12 +39,21 @@ Cloneable.prototype.clone = function () {
   }
 
   this._clonesCount++
-  return pump(this, new Clone(this))
+  return this.pipe(new Clone(this))
+}
+
+function forwardDestroy (src, dest) {
+  src.on('error', destroy)
+  src.on('close', destroy)
+
+  function destroy (err) {
+    dest.destroy(err)
+  }
 }
 
 function clonePiped (that) {
-  if (--that._clonesCount === 0) {
-    pump(that._original, that)
+  if (--that._clonesCount === 0 && !that._destroyed) {
+    that._original.pipe(that)
     that._original = undefined
   }
 }
@@ -63,10 +73,13 @@ function Clone (parent, opts) {
   Ctor.call(this, opts)
 
   this.on('newListener', onDataClone)
+
+  forwardDestroy(this.parent, this)
 }
 
 function onDataClone (event, listener) {
-  if (event === 'data' || event === 'readable') {
+  // We start the flow once all clones are piped or destroyed
+  if (event === 'data' || event === 'readable' || event === 'close') {
     nextTick(clonePiped, this.parent)
     this.removeListener('newListener', onDataClone)
   }

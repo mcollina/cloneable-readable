@@ -98,7 +98,7 @@ test('basic passthrough in obj mode', function (t) {
   var read = false
   var source = from.obj(function (size, next) {
     if (read) {
-      this.push(null)
+      return this.push(null)
     } else {
       read = true
       this.push({ hello: 'world' })
@@ -121,7 +121,7 @@ test('multiple clone in object mode', function (t) {
   var read = false
   var source = from.obj(function (size, next) {
     if (read) {
-      this.push(null)
+      return this.push(null)
     } else {
       read = true
       this.push({ hello: 'world' })
@@ -294,4 +294,174 @@ test('basic passthrough with readable event on clone', function (t) {
     t.equal(chunk.toString(), 'hello world', 'chunk matches in instance')
     cb()
   }))
+})
+
+test('source error destroys all', function (t) {
+  t.plan(5)
+
+  var source = from()
+  var instance = cloneable(source)
+  var clone = instance.clone()
+
+  source.on('error', function (err) {
+    t.ok(err, 'source errors')
+
+    instance.on('error', function (err2) {
+      t.ok(err === err2, 'instance receives same error')
+    })
+
+    instance.on('close', function () {
+      t.pass('instance is closed')
+    })
+
+    clone.on('error', function (err3) {
+      t.ok(err === err3, 'clone receives same error')
+    })
+
+    clone.on('close', function () {
+      t.pass('clone is closed')
+    })
+  })
+
+  source.emit('error', new Error())
+})
+
+test('source destroy destroys all', function (t) {
+  t.plan(2)
+
+  var source = from()
+  var instance = cloneable(source)
+  var clone = instance.clone()
+
+  instance.on('close', function () {
+    t.pass('instance is closed')
+  })
+
+  clone.on('close', function () {
+    t.pass('clone is closed')
+  })
+
+  source.destroy()
+})
+
+test('instance error destroys all but the source', function (t) {
+  t.plan(4)
+
+  var source = from()
+  var instance = cloneable(source)
+  var clone = instance.clone()
+
+  source.on('close', function () {
+    t.fail('source should not be closed')
+  })
+
+  instance.on('error', function (err) {
+    t.is(err.message, 'beep', 'instance errors')
+
+    instance.on('close', function () {
+      t.pass('instance is closed')
+    })
+
+    clone.on('error', function (err3) {
+      t.ok(err === err3, 'clone receives same error')
+    })
+
+    clone.on('close', function () {
+      t.pass('clone is closed')
+    })
+  })
+
+  instance.destroy(new Error('beep'))
+})
+
+test('instance destroy destroys all but the source', function (t) {
+  t.plan(2)
+
+  var source = from()
+  var instance = cloneable(source)
+  var clone = instance.clone()
+
+  source.on('close', function () {
+    t.fail('source should not be closed')
+  })
+
+  instance.on('close', function () {
+    t.pass('instance is closed')
+  })
+
+  clone.on('close', function () {
+    t.pass('clone is closed')
+  })
+
+  instance.destroy()
+})
+
+test('clone destroy does not affect other clones, cloneable or source', function (t) {
+  t.plan(1)
+
+  var source = from()
+  var instance = cloneable(source)
+  var clone = instance.clone()
+  var other = instance.clone()
+
+  source.on('close', function () {
+    t.fail('source should not be closed')
+  })
+
+  instance.on('close', function () {
+    t.fail('instance should not be closed')
+  })
+
+  other.on('close', function () {
+    t.fail('other clone should not be closed')
+  })
+
+  clone.on('close', function () {
+    t.pass('clone is closed')
+  })
+
+  clone.destroy()
+})
+
+test('clone remains readable if other is destroyed', function (t) {
+  t.plan(3)
+
+  var read = false
+  var source = from(function (size, next) {
+    if (read) {
+      this.push(null)
+    } else {
+      read = true
+      this.push('hello')
+    }
+    next()
+  })
+
+  var instance = cloneable(source)
+  var clone = instance.clone()
+  var other = instance.clone()
+
+  instance.pipe(sink.obj(function (chunk, enc, cb) {
+    t.deepEqual(chunk.toString(), 'hello', 'instance chunk matches')
+    cb()
+  }))
+
+  clone.pipe(sink.obj(function (chunk, enc, cb) {
+    t.deepEqual(chunk.toString(), 'hello', 'clone chunk matches')
+    cb()
+  }))
+
+  clone.on('close', function () {
+    t.fail('clone should not be closed')
+  })
+
+  instance.on('close', function () {
+    t.fail('instance should not be closed')
+  })
+
+  other.on('close', function () {
+    t.pass('other is closed')
+  })
+
+  other.destroy()
 })
