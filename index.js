@@ -39,6 +39,9 @@ Cloneable.prototype.clone = function () {
   }
 
   this._clonesCount++
+
+  // the events added by the clone should not count
+  // for starting the flow
   this.removeListener('newListener', onData)
   var clone = new Clone(this)
   this.on('newListener', onData)
@@ -80,6 +83,9 @@ function Clone (parent, opts) {
 
   parent.pipe(this)
 
+  // the events added by the clone should not count
+  // for starting the flow
+  // so we add the newListener handle after we are done
   this.on('newListener', onDataClone)
 }
 
