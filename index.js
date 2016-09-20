@@ -19,9 +19,9 @@ function Cloneable (stream, opts) {
 
   Ctor.call(this, opts)
 
-  this.on('newListener', onData)
-
   forwardDestroy(stream, this)
+
+  this.on('newListener', onData)
 }
 
 inherits(Cloneable, Ctor)
@@ -39,7 +39,11 @@ Cloneable.prototype.clone = function () {
   }
 
   this._clonesCount++
-  return this.pipe(new Clone(this))
+  this.removeListener('newListener', onData)
+  var clone = new Clone(this)
+  this.on('newListener', onData)
+
+  return clone
 }
 
 function forwardDestroy (src, dest) {
@@ -72,9 +76,11 @@ function Clone (parent, opts) {
 
   Ctor.call(this, opts)
 
-  this.on('newListener', onDataClone)
-
   forwardDestroy(this.parent, this)
+
+  parent.pipe(this)
+
+  this.on('newListener', onDataClone)
 }
 
 function onDataClone (event, listener) {
@@ -86,5 +92,9 @@ function onDataClone (event, listener) {
 }
 
 inherits(Clone, Ctor)
+
+Clone.prototype.clone = function () {
+  return this.parent.clone()
+}
 
 module.exports = Cloneable
