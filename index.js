@@ -103,4 +103,8 @@ Clone.prototype.clone = function () {
   return this.parent.clone()
 }
 
+Cloneable.isCloneable = function (stream) {
+  return stream instanceof Cloneable || stream instanceof Clone
+}
+
 module.exports = Cloneable

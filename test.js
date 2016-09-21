@@ -558,3 +558,19 @@ test('waits till all are flowing', function (t) {
     t.pass('wait till nextTick')
   })
 })
+
+test('isCloneable', function (t) {
+  t.plan(4)
+
+  var source = from(['hello', ' ', 'world'])
+  t.notOk(cloneable.isCloneable(source), 'a generic readable is not cloneable')
+
+  var instance = cloneable(source)
+  t.ok(cloneable.isCloneable(instance), 'a cloneable is cloneable')
+
+  var clone = instance.clone()
+  t.ok(cloneable.isCloneable(clone), 'a clone is cloneable')
+
+  var cloneClone = clone.clone()
+  t.ok(cloneable.isCloneable(cloneClone), 'a clone of a clone is cloneable')
+})
