@@ -31,6 +31,18 @@ and https://github.com/nodejs/readable-stream/issues/202. This is my take.
 
 You can also attach `'data'` and `'readable'` events to them.
 
+## API
+
+### cloneable(stream)
+
+Create a `Cloneable` stream.
+A Cloneable has a `clone()` method to create more clones.
+All clones must be resumed/piped to start the flow.
+
+### cloneable.isCloneable(stream)
+
+Check if `stream` needs to be wrapped in a `Cloneable` or not.
+
 ## Acknowledgements
 
 This project was kindly sponsored by [nearForm](http://nearform.com).
