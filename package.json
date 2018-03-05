@@ -33,7 +33,6 @@
   },
   "dependencies": {
     "inherits": "^2.0.1",
-    "process-nextick-args": "^2.0.0",
-    "through2": "^2.0.1"
+    "process-nextick-args": "^2.0.0"
   }
 }

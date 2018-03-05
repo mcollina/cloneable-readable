@@ -1,9 +1,8 @@
 'use strict'
 
-var through2 = require('through2')
+var PassThrough = require('readable-stream').PassThrough
 var inherits = require('inherits')
 var p = require('process-nextick-args')
-var Ctor = through2.ctor()
 
 function Cloneable (stream, opts) {
   if (!(this instanceof Cloneable)) {
@@ -17,7 +16,7 @@ function Cloneable (stream, opts) {
   opts = opts || {}
   opts.objectMode = objectMode
 
-  Ctor.call(this, opts)
+  PassThrough.call(this, opts)
 
   forwardDestroy(stream, this)
 
@@ -25,7 +24,7 @@ function Cloneable (stream, opts) {
   this.once('resume', onResume)
 }
 
-inherits(Cloneable, Ctor)
+inherits(Cloneable, PassThrough)
 
 function onData (event, listener) {
   if (event === 'data' || event === 'readable') {
@@ -66,7 +65,7 @@ function forwardDestroy (src, dest) {
 }
 
 function clonePiped (that) {
-  if (--that._clonesCount === 0 && !that._destroyed) {
+  if (--that._clonesCount === 0 && !that._readableState.destroyed) {
     that._original.pipe(that)
     that._original = undefined
   }
@@ -84,7 +83,7 @@ function Clone (parent, opts) {
 
   this.parent = parent
 
-  Ctor.call(this, opts)
+  PassThrough.call(this, opts)
 
   forwardDestroy(this.parent, this)
 
@@ -110,7 +109,7 @@ function onResumeClone () {
   p.nextTick(clonePiped, this.parent)
 }
 
-inherits(Clone, Ctor)
+inherits(Clone, PassThrough)
 
 Clone.prototype.clone = function () {
   return this.parent.clone()

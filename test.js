@@ -359,18 +359,18 @@ test('instance error destroys all but the source', function (t) {
 
   instance.on('error', function (err) {
     t.is(err.message, 'beep', 'instance errors')
+  })
 
-    instance.on('close', function () {
-      t.pass('instance is closed')
-    })
+  instance.on('close', function () {
+    t.pass('instance is closed')
+  })
 
-    clone.on('error', function (err3) {
-      t.ok(err === err3, 'clone receives same error')
-    })
+  clone.on('error', function (err) {
+    t.is(err.message, 'beep', 'instance errors')
+  })
 
-    clone.on('close', function () {
-      t.pass('clone is closed')
-    })
+  clone.on('close', function () {
+    t.pass('clone is closed')
   })
 
   instance.destroy(new Error('beep'))
