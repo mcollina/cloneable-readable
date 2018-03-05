@@ -2,7 +2,7 @@
 
 var through2 = require('through2')
 var inherits = require('inherits')
-var nextTick = require('process-nextick-args')
+var p = require('process-nextick-args')
 var Ctor = through2.ctor()
 
 function Cloneable (stream, opts) {
@@ -29,7 +29,7 @@ inherits(Cloneable, Ctor)
 function onData (event, listener) {
   if (event === 'data' || event === 'readable') {
     this.removeListener('newListener', onData)
-    nextTick(clonePiped, this)
+    p.nextTick(clonePiped, this)
   }
 }
 
@@ -92,7 +92,7 @@ function Clone (parent, opts) {
 function onDataClone (event, listener) {
   // We start the flow once all clones are piped or destroyed
   if (event === 'data' || event === 'readable' || event === 'close') {
-    nextTick(clonePiped, this.parent)
+    p.nextTick(clonePiped, this.parent)
     this.removeListener('newListener', onDataClone)
   }
 }
