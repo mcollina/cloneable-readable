@@ -22,6 +22,7 @@ function Cloneable (stream, opts) {
   forwardDestroy(stream, this)
 
   this.on('newListener', onData)
+  this.once('resume', onResume)
 }
 
 inherits(Cloneable, Ctor)
@@ -29,8 +30,14 @@ inherits(Cloneable, Ctor)
 function onData (event, listener) {
   if (event === 'data' || event === 'readable') {
     this.removeListener('newListener', onData)
+    this.removeListener('resume', onResume)
     p.nextTick(clonePiped, this)
   }
+}
+
+function onResume () {
+  this.removeListener('newListener', onData)
+  p.nextTick(clonePiped, this)
 }
 
 Cloneable.prototype.clone = function () {
@@ -87,6 +94,7 @@ function Clone (parent, opts) {
   // for starting the flow
   // so we add the newListener handle after we are done
   this.on('newListener', onDataClone)
+  this.on('resume', onResumeClone)
 }
 
 function onDataClone (event, listener) {
@@ -95,6 +103,11 @@ function onDataClone (event, listener) {
     p.nextTick(clonePiped, this.parent)
     this.removeListener('newListener', onDataClone)
   }
+}
+
+function onResumeClone () {
+  this.removeListener('newListener', onDataClone)
+  p.nextTick(clonePiped, this.parent)
 }
 
 inherits(Clone, Ctor)
