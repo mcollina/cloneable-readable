@@ -1,5 +1,7 @@
 'use strict'
 
+var fs = require('fs')
+var path = require('path')
 var test = require('tape').test
 var from = require('from2')
 var sink = require('flush-write-stream')
@@ -357,18 +359,18 @@ test('instance error destroys all but the source', function (t) {
 
   instance.on('error', function (err) {
     t.is(err.message, 'beep', 'instance errors')
+  })
 
-    instance.on('close', function () {
-      t.pass('instance is closed')
-    })
+  instance.on('close', function () {
+    t.pass('instance is closed')
+  })
 
-    clone.on('error', function (err3) {
-      t.ok(err === err3, 'clone receives same error')
-    })
+  clone.on('error', function (err) {
+    t.is(err.message, 'beep', 'instance errors')
+  })
 
-    clone.on('close', function () {
-      t.pass('clone is closed')
-    })
+  clone.on('close', function () {
+    t.pass('clone is closed')
   })
 
   instance.destroy(new Error('beep'))
@@ -573,4 +575,87 @@ test('isCloneable', function (t) {
 
   var cloneClone = clone.clone()
   t.ok(cloneable.isCloneable(cloneClone), 'a clone of a clone is cloneable')
+})
+
+test('emits finish', function (t) {
+  var chunks = ['a', 'b', 'c', 'd', null]
+  var e1 = ['a', 'b', 'c', 'd']
+  var e2 = ['a', 'b', 'c', 'd']
+
+  t.plan(2 + e1.length + e2.length)
+
+  var source = from(function (size, next) {
+    setImmediate(next, null, chunks.shift())
+  })
+
+  var instance = cloneable(source)
+
+  var clone = instance.clone()
+
+  clone.on('finish', t.pass.bind(null, 'clone emits finish'))
+  instance.on('finish', t.pass.bind(null, 'main emits finish'))
+
+  instance.pipe(sink(function (chunk, enc, cb) {
+    t.equal(chunk.toString(), e1.shift(), 'chunk matches')
+    cb()
+  }))
+
+  clone.on('data', function (chunk) {
+    t.equal(chunk.toString(), e2.shift(), 'chunk matches')
+  })
+})
+
+test('clone async w resume', function (t) {
+  t.plan(4)
+
+  var read = false
+  var source = from(function (size, next) {
+    if (read) {
+      this.push(null)
+    } else {
+      read = true
+      this.push('hello world')
+    }
+    next()
+  })
+
+  var instance = cloneable(source)
+  t.notOk(read, 'stream not started')
+
+  var cloned = instance.clone()
+  t.notOk(read, 'stream not started')
+
+  instance.on('end', t.pass.bind(null, 'end emitted'))
+  instance.resume()
+
+  setImmediate(function () {
+    cloned.on('end', t.pass.bind(null, 'end emitted'))
+    cloned.resume()
+  })
+})
+
+test('big file', function (t) {
+  t.plan(6)
+
+  var stream = cloneable(fs.createReadStream(path.join(__dirname, 'big')))
+
+  function pipe (s, num) {
+    s.on('end', function () {
+      t.pass('end for ' + num)
+    })
+
+    s.pipe(fs.createWriteStream(path.join(__dirname, 'out')))
+      .on('finish', function () {
+        t.pass('finish for ' + num)
+      })
+  }
+
+  // Pipe in another event loop tick <-- this one finished only, it's the original cloneable.
+  setImmediate(pipe.bind(null, stream, 1))
+
+  // Pipe in the same event loop tick
+  pipe(stream.clone(), 0)
+
+  // Pipe a long time after
+  setTimeout(pipe.bind(null, stream.clone(), 2), 100)
 })
