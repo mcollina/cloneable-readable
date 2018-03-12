@@ -4,6 +4,7 @@ var fs = require('fs')
 var path = require('path')
 var test = require('tape').test
 var from = require('from2')
+var crypto = require('crypto')
 var sink = require('flush-write-stream')
 var cloneable = require('./')
 
@@ -635,18 +636,39 @@ test('clone async w resume', function (t) {
 })
 
 test('big file', function (t) {
-  t.plan(6)
+  t.plan(9)
 
   var stream = cloneable(fs.createReadStream(path.join(__dirname, 'big')))
+  var hash = crypto.createHash('sha1')
+  hash.setEncoding('hex')
+
+  var toCheck
+
+  fs.createReadStream(path.join(__dirname, 'big'))
+    .on('end', function () {
+      toCheck = hash.read()
+    })
+    .pipe(hash)
 
   function pipe (s, num) {
     s.on('end', function () {
       t.pass('end for ' + num)
     })
 
-    s.pipe(fs.createWriteStream(path.join(__dirname, 'out')))
+    const dest = path.join(__dirname, 'out')
+
+    s.pipe(fs.createWriteStream(dest))
       .on('finish', function () {
         t.pass('finish for ' + num)
+
+        var destHash = crypto.createHash('sha1')
+        destHash.setEncoding('hex')
+
+        fs.createReadStream(path.join(__dirname, 'big'))
+          .on('end', function () {
+            t.equal(destHash.read(), toCheck)
+          })
+          .pipe(destHash)
       })
   }
 
