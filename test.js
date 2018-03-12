@@ -300,7 +300,7 @@ test('basic passthrough with readable event on clone', function (t) {
 })
 
 test('source error destroys all', function (t) {
-  t.plan(5)
+  t.plan(3)
 
   var source = from()
   var instance = cloneable(source)
@@ -313,16 +313,8 @@ test('source error destroys all', function (t) {
       t.ok(err === err2, 'instance receives same error')
     })
 
-    instance.on('close', function () {
-      t.pass('instance is closed')
-    })
-
     clone.on('error', function (err3) {
       t.ok(err === err3, 'clone receives same error')
-    })
-
-    clone.on('close', function () {
-      t.pass('clone is closed')
     })
   })
 
@@ -336,19 +328,22 @@ test('source destroy destroys all', function (t) {
   var instance = cloneable(source)
   var clone = instance.clone()
 
-  instance.on('close', function () {
-    t.pass('instance is closed')
+  instance.on('end', function () {
+    t.pass('instance has ended')
   })
 
-  clone.on('close', function () {
-    t.pass('clone is closed')
+  clone.on('end', function () {
+    t.pass('clone has ended')
   })
+
+  clone.resume()
+  instance.resume()
 
   source.destroy()
 })
 
 test('instance error destroys all but the source', function (t) {
-  t.plan(4)
+  t.plan(2)
 
   var source = from()
   var instance = cloneable(source)
@@ -363,7 +358,7 @@ test('instance error destroys all but the source', function (t) {
   })
 
   instance.on('close', function () {
-    t.pass('instance is closed')
+    t.fail('close should not be emitted')
   })
 
   clone.on('error', function (err) {
@@ -371,7 +366,7 @@ test('instance error destroys all but the source', function (t) {
   })
 
   clone.on('close', function () {
-    t.pass('clone is closed')
+    t.fail('close should not be emitted')
   })
 
   instance.destroy(new Error('beep'))
@@ -388,13 +383,16 @@ test('instance destroy destroys all but the source', function (t) {
     t.fail('source should not be closed')
   })
 
-  instance.on('close', function () {
-    t.pass('instance is closed')
+  instance.on('end', function () {
+    t.pass('instance has ended')
   })
 
-  clone.on('close', function () {
-    t.pass('clone is closed')
+  clone.on('end', function () {
+    t.pass('clone has ended')
   })
+
+  instance.resume()
+  clone.resume()
 
   instance.destroy()
 })
@@ -636,7 +634,7 @@ test('clone async w resume', function (t) {
 })
 
 test('big file', function (t) {
-  t.plan(9)
+  t.plan(13)
 
   var stream = cloneable(fs.createReadStream(path.join(__dirname, 'big')))
   var hash = crypto.createHash('sha1')
@@ -645,10 +643,11 @@ test('big file', function (t) {
   var toCheck
 
   fs.createReadStream(path.join(__dirname, 'big'))
-    .on('end', function () {
-      toCheck = hash.read()
-    })
     .pipe(hash)
+    .once('readable', function () {
+      toCheck = hash.read()
+      t.ok(toCheck)
+    })
 
   function pipe (s, num) {
     s.on('end', function () {
@@ -664,11 +663,13 @@ test('big file', function (t) {
         var destHash = crypto.createHash('sha1')
         destHash.setEncoding('hex')
 
-        fs.createReadStream(path.join(__dirname, 'big'))
-          .on('end', function () {
-            t.equal(destHash.read(), toCheck)
-          })
+        fs.createReadStream(dest)
           .pipe(destHash)
+          .once('readable', function () {
+            const hash = destHash.read()
+            t.ok(hash)
+            t.equal(hash, toCheck)
+          })
       })
   }
 
@@ -679,5 +680,5 @@ test('big file', function (t) {
   pipe(stream.clone(), 0)
 
   // Pipe a long time after
-  setTimeout(pipe.bind(null, stream.clone(), 2), 100)
+  setTimeout(pipe.bind(null, stream.clone(), 2), 1000)
 })
