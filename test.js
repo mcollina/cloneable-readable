@@ -654,7 +654,7 @@ test('big file', function (t) {
       t.pass('end for ' + num)
     })
 
-    const dest = path.join(__dirname, 'out')
+    var dest = path.join(__dirname, 'out')
 
     s.pipe(fs.createWriteStream(dest))
       .on('finish', function () {
@@ -666,7 +666,7 @@ test('big file', function (t) {
         fs.createReadStream(dest)
           .pipe(destHash)
           .once('readable', function () {
-            const hash = destHash.read()
+            var hash = destHash.read()
             t.ok(hash)
             t.equal(hash, toCheck)
           })
