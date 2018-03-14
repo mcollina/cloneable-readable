@@ -146,7 +146,6 @@ Clone.prototype._destroy = function (err, cb) {
     this.emit('close')
   }
 
-  console.log('clone destroy', err)
   p.nextTick(cb, err)
 }
 
