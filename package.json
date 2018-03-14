@@ -1,6 +1,6 @@
 {
   "name": "cloneable-readable",
-  "version": "1.1.1",
+  "version": "1.1.2",
   "description": "Clone a Readable stream, safely",
   "main": "index.js",
   "scripts": {
