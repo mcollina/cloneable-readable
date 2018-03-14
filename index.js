@@ -22,12 +22,15 @@ function Cloneable (stream, opts) {
 
   this.on('newListener', onData)
   this.once('resume', onResume)
+
+  this._hasListener = true
 }
 
 inherits(Cloneable, PassThrough)
 
 function onData (event, listener) {
   if (event === 'data' || event === 'readable') {
+    this._hasListener = false
     this.removeListener('newListener', onData)
     this.removeListener('resume', onResume)
     p.nextTick(clonePiped, this)
@@ -35,6 +38,7 @@ function onData (event, listener) {
 }
 
 function onResume () {
+  this._hasListener = false
   this.removeListener('newListener', onData)
   p.nextTick(clonePiped, this)
 }
@@ -50,17 +54,33 @@ Cloneable.prototype.clone = function () {
   // for starting the flow
   this.removeListener('newListener', onData)
   var clone = new Clone(this)
-  this.on('newListener', onData)
+  if (this._hasListener) {
+    this.on('newListener', onData)
+  }
 
   return clone
 }
 
+Cloneable.prototype._destroy = function (err, cb) {
+  if (!err) {
+    this.push(null)
+    this.end()
+    this.emit('close')
+  }
+
+  p.nextTick(cb, err)
+}
+
 function forwardDestroy (src, dest) {
   src.on('error', destroy)
-  src.on('close', destroy)
+  src.on('close', onClose)
 
   function destroy (err) {
     dest.destroy(err)
+  }
+
+  function onClose () {
+    dest.end()
   }
 }
 
@@ -85,7 +105,7 @@ function Clone (parent, opts) {
 
   PassThrough.call(this, opts)
 
-  forwardDestroy(this.parent, this)
+  forwardDestroy(parent, this)
 
   parent.pipe(this)
 
@@ -117,6 +137,16 @@ Clone.prototype.clone = function () {
 
 Cloneable.isCloneable = function (stream) {
   return stream instanceof Cloneable || stream instanceof Clone
+}
+
+Clone.prototype._destroy = function (err, cb) {
+  if (!err) {
+    this.push(null)
+    this.end()
+    this.emit('close')
+  }
+
+  p.nextTick(cb, err)
 }
 
 module.exports = Cloneable
