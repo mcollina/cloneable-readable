@@ -1,8 +1,8 @@
 'use strict'
 
-var PassThrough = require('readable-stream').PassThrough
-var inherits = require('inherits')
-var p = require('process-nextick-args')
+const { PassThrough } = require('readable-stream')
+const inherits = require('inherits')
+const { nextTick } = require('process')
 
 function Cloneable (stream, opts) {
   if (!(this instanceof Cloneable)) {
@@ -33,14 +33,14 @@ function onData (event, listener) {
     this._hasListener = false
     this.removeListener('newListener', onData)
     this.removeListener('resume', onResume)
-    p.nextTick(clonePiped, this)
+    nextTick(clonePiped, this)
   }
 }
 
 function onResume () {
   this._hasListener = false
   this.removeListener('newListener', onData)
-  p.nextTick(clonePiped, this)
+  nextTick(clonePiped, this)
 }
 
 Cloneable.prototype.clone = function () {
@@ -65,10 +65,9 @@ Cloneable.prototype._destroy = function (err, cb) {
   if (!err) {
     this.push(null)
     this.end()
-    this.emit('close')
   }
 
-  p.nextTick(cb, err)
+  nextTick(cb, err)
 }
 
 function forwardDestroy (src, dest) {
@@ -119,14 +118,14 @@ function Clone (parent, opts) {
 function onDataClone (event, listener) {
   // We start the flow once all clones are piped or destroyed
   if (event === 'data' || event === 'readable' || event === 'close') {
-    p.nextTick(clonePiped, this.parent)
+    nextTick(clonePiped, this.parent)
     this.removeListener('newListener', onDataClone)
   }
 }
 
 function onResumeClone () {
   this.removeListener('newListener', onDataClone)
-  p.nextTick(clonePiped, this.parent)
+  nextTick(clonePiped, this.parent)
 }
 
 inherits(Clone, PassThrough)
@@ -143,10 +142,9 @@ Clone.prototype._destroy = function (err, cb) {
   if (!err) {
     this.push(null)
     this.end()
-    this.emit('close')
   }
 
-  p.nextTick(cb, err)
+  nextTick(cb, err)
 }
 
 module.exports = Cloneable

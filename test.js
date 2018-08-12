@@ -343,7 +343,7 @@ test('source destroy destroys all', function (t) {
 })
 
 test('instance error destroys all but the source', function (t) {
-  t.plan(2)
+  t.plan(4)
 
   var source = from()
   var instance = cloneable(source)
@@ -358,7 +358,7 @@ test('instance error destroys all but the source', function (t) {
   })
 
   instance.on('close', function () {
-    t.fail('close should not be emitted')
+    t.pass('close should be emitted')
   })
 
   clone.on('error', function (err) {
@@ -366,7 +366,7 @@ test('instance error destroys all but the source', function (t) {
   })
 
   clone.on('close', function () {
-    t.fail('close should not be emitted')
+    t.pass('close should be emitted')
   })
 
   instance.destroy(new Error('beep'))
