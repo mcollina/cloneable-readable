@@ -7,6 +7,8 @@ var from = require('from2')
 var crypto = require('crypto')
 var sink = require('flush-write-stream')
 var cloneable = require('./')
+var pipeline = require('readable-stream').pipeline
+var Readable = require('readable-stream').Readable
 
 test('basic passthrough', function (t) {
   t.plan(2)
@@ -681,4 +683,23 @@ test('big file', function (t) {
 
   // Pipe a long time after
   setTimeout(pipe.bind(null, stream.clone(), 2), 1000)
+})
+
+test('pipeline error', function (t) {
+  t.plan(1)
+
+  var err = new Error('kaboom')
+
+  pipeline([
+    cloneable(new Readable({
+      read: function () {
+        this.destroy(err)
+      }
+    })),
+    sink(function (chunk, enc, cb) {
+      t.fail('this should not be called')
+    })
+  ], function (_err) {
+    t.equal(_err, err)
+  })
 })
