@@ -26,6 +26,7 @@
     "flush-write-stream": "^1.0.0",
     "from2": "^2.1.1",
     "pre-commit": "^1.1.2",
+    "pump": "^3.0.0",
     "readable-stream": "^2.3.5",
     "standard": "^11.0.0",
     "tap-spec": "^4.1.1",
