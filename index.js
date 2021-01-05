@@ -9,7 +9,7 @@ function Cloneable (stream, opts) {
     return new Cloneable(stream, opts)
   }
 
-  var objectMode = stream._readableState.objectMode
+  const objectMode = stream._readableState.objectMode
   this._original = stream
   this._clonesCount = 1
 
@@ -53,7 +53,7 @@ Cloneable.prototype.clone = function () {
   // the events added by the clone should not count
   // for starting the flow
   this.removeListener('newListener', onData)
-  var clone = new Clone(this)
+  const clone = new Clone(this)
   if (this._hasListener) {
     this.on('newListener', onData)
   }
@@ -96,7 +96,7 @@ function Clone (parent, opts) {
     return new Clone(parent, opts)
   }
 
-  var objectMode = parent._readableState.objectMode
+  const objectMode = parent._readableState.objectMode
 
   opts = opts || {}
   opts.objectMode = objectMode

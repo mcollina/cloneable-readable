@@ -1,10 +1,10 @@
 'use strict'
 
-var cloneable = require('./')
-var fs = require('fs')
-var pump = require('pump')
+const cloneable = require('./')
+const fs = require('fs')
+const pump = require('pump')
 
-var stream = cloneable(fs.createReadStream('./package.json'))
+const stream = cloneable(fs.createReadStream('./package.json'))
 
 pump(stream.clone(), fs.createWriteStream('./out1'))
 
