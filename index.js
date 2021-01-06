@@ -12,6 +12,7 @@ function Cloneable (stream, opts) {
   const objectMode = stream._readableState.objectMode
   this._original = stream
   this._clonesCount = 1
+  this._internalPipe = false
 
   opts = opts || {}
   opts.objectMode = objectMode
@@ -21,7 +22,7 @@ function Cloneable (stream, opts) {
   forwardDestroy(stream, this)
 
   this.on('newListener', onData)
-  this.once('resume', onResume)
+  this.on('resume', onResume)
 
   this._hasListener = true
 }
@@ -33,6 +34,7 @@ function onData (event, listener) {
     this._hasListener = false
     this.removeListener('newListener', onData)
     this.removeListener('resume', onResume)
+
     nextTick(clonePiped, this)
   }
 }
@@ -40,7 +42,14 @@ function onData (event, listener) {
 function onResume () {
   this._hasListener = false
   this.removeListener('newListener', onData)
+  this.removeListener('resume', onResume)
+
   nextTick(clonePiped, this)
+}
+
+Cloneable.prototype.resume = function () {
+  if (this._internalPipe) return
+  PassThrough.prototype.resume.call(this)
 }
 
 Cloneable.prototype.clone = function () {
@@ -53,9 +62,11 @@ Cloneable.prototype.clone = function () {
   // the events added by the clone should not count
   // for starting the flow
   this.removeListener('newListener', onData)
+  this.removeListener('resume', onResume)
   const clone = new Clone(this)
   if (this._hasListener) {
     this.on('newListener', onData)
+    this.on('resume', onResume)
   }
 
   return clone
@@ -107,13 +118,18 @@ function Clone (parent, opts) {
 
   forwardDestroy(parent, this)
 
+  // setting _internalPipe flag to prevent this pipe from starting
+  // the flow. we have also overridden resume to do nothing when
+  // this pipe tries to start the flow
+  parent._internalPipe = true
   parent.pipe(this)
+  parent._internalPipe = false
 
   // the events added by the clone should not count
   // for starting the flow
   // so we add the newListener handle after we are done
   this.on('newListener', onDataClone)
-  this.on('resume', onResumeClone)
+  this.once('resume', onResumeClone)
 }
 
 function onDataClone (event, listener) {
@@ -121,11 +137,13 @@ function onDataClone (event, listener) {
   if (event === 'data' || event === 'readable' || event === 'close') {
     nextTick(clonePiped, this.parent)
     this.removeListener('newListener', onDataClone)
+    this.removeListener('resume', onResumeClone)
   }
 }
 
 function onResumeClone () {
   this.removeListener('newListener', onDataClone)
+  this.removeListener('resume', onResumeClone)
   nextTick(clonePiped, this.parent)
 }
 

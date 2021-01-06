@@ -2,7 +2,7 @@
 
 const fs = require('fs')
 const path = require('path')
-const test = require('tape').test
+const { test } = require('tape')
 const from = require('from2')
 const crypto = require('crypto')
 const sink = require('flush-write-stream')
@@ -62,6 +62,41 @@ test('clone sync', function (t) {
     t.equal(chunk.toString(), 'hello world', 'chunk matches')
     cb()
   }))
+})
+
+test('clone sync delayed', function (t) {
+  t.plan(4)
+
+  let read = false
+  const source = from(function (size, next) {
+    if (read) {
+      this.push(null)
+    } else {
+      read = true
+      this.push('hello world')
+    }
+    next()
+  })
+
+  const instance = cloneable(source)
+  t.notOk(read, 'stream not started')
+
+  const cloned = instance.clone()
+  t.notOk(read, 'stream not started')
+
+  setTimeout(() => {
+    cloned.pipe(sink(function (chunk, enc, cb) {
+      t.equal(chunk.toString(), 'hello world', 'chunk matches')
+      cb()
+    }))
+
+    setTimeout(() => {
+      instance.pipe(sink(function (chunk, enc, cb) {
+        t.equal(chunk.toString(), 'hello world', 'chunk matches')
+        cb()
+      }))
+    }, 10)
+  }, 10)
 })
 
 test('clone async', function (t) {
