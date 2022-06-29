@@ -1,7 +1,6 @@
 'use strict'
 
 const { PassThrough } = require('readable-stream')
-const inherits = require('inherits')
 const { nextTick } = require('process')
 
 function Cloneable (stream, opts) {
@@ -27,7 +26,8 @@ function Cloneable (stream, opts) {
   this._hasListener = true
 }
 
-inherits(Cloneable, PassThrough)
+Object.setPrototypeOf(Cloneable.prototype, PassThrough.prototype)
+Object.setPrototypeOf(Cloneable, PassThrough)
 
 function onData (event, listener) {
   if (event === 'data' || event === 'readable') {
@@ -147,7 +147,8 @@ function onResumeClone () {
   nextTick(clonePiped, this.parent)
 }
 
-inherits(Clone, PassThrough)
+Object.setPrototypeOf(Clone.prototype, PassThrough.prototype)
+Object.setPrototypeOf(Clone, PassThrough)
 
 Clone.prototype.clone = function () {
   return this.parent.clone()
