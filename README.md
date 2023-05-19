@@ -1,5 +1,5 @@
 # cloneable-readable
-[![npm](https://img.shields.io/npm/v/cloneable-readable)](https://www.npmjs.com/packagecloneable-readable)
+[![npm](https://img.shields.io/npm/v/cloneable-readable)](https://www.npmjs.com/package/cloneable-readable)
 
 Clone a Readable stream, safely.
 
