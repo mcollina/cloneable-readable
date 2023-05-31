@@ -124,5 +124,7 @@ class Clone extends PassThrough {
       
       
 }
-
-module.exports = Cloneable
+function cloneable(stream, opts) {
+    return new Cloneable(stream, opts)
+}
+module.exports = cloneable
