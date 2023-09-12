@@ -3,13 +3,13 @@
 const fs = require('fs')
 const path = require('path')
 const { test } = require('tape')
+const stream1 = require('stream')
 const from = require('from2')
 const crypto = require('crypto')
 const sink = require('flush-write-stream')
 const cloneable = require('./')
 const pipeline = require('readable-stream').pipeline
 const Readable = require('readable-stream').Readable
-const NullWritable = require('null-writable').default
 
 test('basic passthrough', function (t) {
   t.plan(2)
@@ -730,6 +730,16 @@ test('waits for slowest clone', function (t) {
     .on('data', (chunk, encoding) => { streamOut += chunk.length })
   const clone = stream.clone()
     .on('data', (chunk, encoding) => { cloneOut += chunk.length })
+
+  class NullWritable extends stream1.Writable {
+    _write (_chunk, _encoding, callback) {
+      callback()
+    }
+
+    _writev (_chunks, callback) {
+      callback()
+    }
+  }
 
   const sink1 = new NullWritable()
   const sink2 = new NullWritable()

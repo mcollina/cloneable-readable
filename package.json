@@ -25,7 +25,6 @@
   "devDependencies": {
     "flush-write-stream": "^2.0.0",
     "from2": "^2.1.1",
-    "null-writable": "^1.0.5",
     "pre-commit": "^1.1.2",
     "standard": "^17.0.0",
     "tap-spec": "^5.0.0",
